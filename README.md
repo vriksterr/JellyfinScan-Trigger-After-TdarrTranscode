@@ -10,7 +10,7 @@ This project is a C++ program that monitors the status of a media server and tri
 
 ## Requirements
 
-- **C++17 or later**
+- **C++17 or later** Follow [these steps to install MINGW64 for windows](https://code.visualstudio.com/docs/cpp/config-mingw#_prerequisites)
 - **libcurl**: for making HTTP requests.
 - **nlohmann::json**: for handling JSON responses.
 
@@ -36,7 +36,18 @@ This project is a C++ program that monitors the status of a media server and tri
     ```bash
     g++ -o jellyfin_monitor.exe final.cpp -I[path_to_vcpkg]/installed/x64-windows/include -L[path_to_vcpkg]/installed/x64-windows/lib -lcurl -pthread
     ```
+### Using MingW to install libcurl (Alternate)
+    ```bash
+    # First, update the package database and install development tools
+    pacman -Syuu  # This updates the package database and system
 
+    # Install curl with development headers and libraries for MinGW 64-bit:
+    pacman -S mingw-w64-x86_64-curl
+
+    # If you're using a 32-bit system, install the 32-bit version:
+    pacman -S mingw-w64-i686-curl
+
+    ```
 ### Manual Setup
 
 1. Download the `nlohmann::json` header from [here](https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp).
