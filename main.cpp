@@ -9,9 +9,9 @@ using json = nlohmann::json;
 using namespace std::chrono_literals;
 
 // Configuration
-const std::string API_URL = "http://<ip-domain-tdarr-server>/api/v2/get-nodes";
-const std::string JELLYFIN_API_URL = "http://<Jellyfin-ip-address>";
-const std::string JELLYFIN_API_KEY = "<Jellyfin-api-key>";
+const std::string API_URL = "http://<TDARR-IP>/api/v2/get-nodes";
+const std::string JELLYFIN_API_URL = "http://<Jellyfin-IP>";
+const std::string JELLYFIN_API_KEY = "<Jellyfin-API-Token>";
 
 // Helper function for HTTP GET requests
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* out) {
@@ -30,13 +30,13 @@ std::string httpGet(const std::string& url) {
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
-    if(curl) {
+    if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
         res = curl_easy_perform(curl);
 
-        if(res != CURLE_OK) {
+        if (res != CURLE_OK) {
             std::cerr << "Error during GET request: " << curl_easy_strerror(res) << std::endl;
         }
         curl_easy_cleanup(curl);
@@ -54,7 +54,7 @@ void triggerJellyfinScan() {
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
-    if(curl) {
+    if (curl) {
         headers = curl_slist_append(headers, ("X-Emby-Token: " + JELLYFIN_API_KEY).c_str());
 
         curl_easy_setopt(curl, CURLOPT_URL, api_url.c_str());
@@ -62,7 +62,7 @@ void triggerJellyfinScan() {
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
         res = curl_easy_perform(curl);
-        if(res == CURLE_OK) {
+        if (res == CURLE_OK) {
             long response_code;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
             if (response_code == 204) {
@@ -94,25 +94,35 @@ int main() {
             // Parse the response JSON
             json responseData = json::parse(response);
 
-            auto workers = responseData["dPjqRnrnl"]["workers"];
-            auto queueLengths = responseData["dPjqRnrnl"]["queueLengths"];
+            // Dynamically get the first key (e.g., "PIOVBZ_2G")
+            if (responseData.is_object()) {
+                auto nodeID = responseData.begin().key();  // Get the first key (dynamic node ID)
+                auto nodeData = responseData[nodeID];      // Get the data for that node
 
-            // Check the conditions
-            bool workersEmpty = workers.empty();
-            int transcodegpuQueue = queueLengths.value("transcodegpu", 0);
+                // Extract workers and queueLengths
+                auto workers = nodeData["workers"];
+                auto queueLengths = nodeData["queueLengths"];
 
-            // Debugging outputs
-            std::cout << "Workers empty: " << workersEmpty
-                      << ", Transcode GPU queue: " << transcodegpuQueue << std::endl;
+                // Check the conditions
+                bool workersEmpty = workers.empty();
+                int transcodegpuQueue = queueLengths.value("transcodegpu", 0);
 
-            // Trigger Jellyfin scan if conditions are met
-            if (workersEmpty && transcodegpuQueue == 0) {
-                if (!jellyfinScanTriggered) {
-                    triggerJellyfinScan();
-                    jellyfinScanTriggered = true;  // Mark that the scan has been triggered
+                // Debugging outputs
+                std::cout << "Node ID: " << nodeID << std::endl;
+                std::cout << "Workers empty: " << workersEmpty
+                          << ", Transcode GPU queue: " << transcodegpuQueue << std::endl;
+
+                // Trigger Jellyfin scan if conditions are met
+                if (workersEmpty && transcodegpuQueue == 0) {
+                    if (!jellyfinScanTriggered) {
+                        triggerJellyfinScan();
+                        jellyfinScanTriggered = true;  // Mark that the scan has been triggered
+                    }
+                } else {
+                    jellyfinScanTriggered = false;  // Reset the flag if conditions are not met
                 }
             } else {
-                jellyfinScanTriggered = false;  // Reset the flag if conditions are not met
+                std::cerr << "Invalid response format." << std::endl;
             }
 
             std::this_thread::sleep_for(10s);  // Wait for 10 seconds before the next check
