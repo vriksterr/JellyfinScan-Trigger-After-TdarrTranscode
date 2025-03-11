@@ -36,7 +36,7 @@ This project is a C++ program that monitors the status of a media server and tri
     ```bash
     g++ -o jellyfin_monitor.exe final.cpp -I[path_to_vcpkg]/installed/x64-windows/include -L[path_to_vcpkg]/installed/x64-windows/lib -lcurl -pthread
     ```
-### Using MingW to install libcurl (Alternate)
+### Using MingW to install libcurl (Alternate)(Follow these steps that you will need on the system to run the EXE)
     ```bash
     # First, update the package database and install development tools
     pacman -Syuu  # This updates the package database and system
